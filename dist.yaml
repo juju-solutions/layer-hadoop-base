@@ -1,0 +1,69 @@
+# This file contains values that are likely to change per distribution.
+# The aim is to make it easier to update / extend the charms with
+# minimal changes to the shared code in charmhelpers.
+hadoop_version: '2.7.1'
+packages:
+    - 'libsnappy1'
+    - 'libsnappy-dev'
+    - 'openssl'
+    - 'liblzo2-2'
+groups:
+    - 'hadoop'
+    - 'mapred'
+    - 'supergroup'
+users:
+    ubuntu:
+        groups: ['hadoop', 'mapred', 'supergroup']
+    hdfs:
+        groups: ['hadoop']
+    mapred:
+        groups: ['hadoop', 'mapred']
+    yarn:
+        groups: ['hadoop']
+dirs:
+    hadoop:
+        path: '/usr/lib/hadoop'
+        perms: 0777
+    hadoop_conf:
+        path: '/etc/hadoop/conf'
+    hadoop_tmp:
+        path: '/tmp/hadoop'
+        perms: 0777
+    mapred_log:
+        path: '/var/log/hadoop/mapred'
+        owner: 'mapred'
+        group: 'hadoop'
+        perms: 0755
+    mapred_run:
+        path: '/var/run/hadoop/mapred'
+        owner: 'mapred'
+        group: 'hadoop'
+        perms: 0755
+    yarn_tmp:
+        path: '/tmp/hadoop-yarn'
+        perms: 0777
+    yarn_log_dir:
+        path: '/var/log/hadoop/yarn'
+        owner: 'yarn'
+        group: 'hadoop'
+        perms: 0755
+    hdfs_log_dir:
+        path: '/var/log/hadoop/hdfs'
+        owner: 'hdfs'
+        group: 'hadoop'
+        perms: 0755
+    hdfs_dir_base:
+        path: '/usr/local/hadoop/data'
+        owner: 'hdfs'
+        group: 'hadoop'
+        perms: 0755
+    cache_base:
+        path: '{dirs[hdfs_dir_base]}/cache'
+        owner: 'hdfs'
+        group: 'hadoop'
+        perms: 01775
+    cache_dir:
+        path: '{dirs[hdfs_dir_base]}/cache/hadoop'
+        owner: 'hdfs'
+        group: 'hadoop'
+        perms: 0775
