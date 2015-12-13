@@ -1,7 +1,1 @@
 includes: ['layer:basic']
-defines:
-  dist_keys:
-    description: 'List of keys that are required in dist.yaml'
-    type: 'array'
-    items:
-      type: 'string'
