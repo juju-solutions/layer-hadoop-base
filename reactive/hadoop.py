@@ -41,7 +41,7 @@ if HDFS_RELATION:
         hadoop = get_hadoop_base()
         hdfs = HDFS(hadoop)
         hdfs.configure_hdfs_base(namenode.host(), namenode.port())
-        set_state('hadoop.hdfs.ready')
+        set_state('hadoop.hdfs.configured')
 
 
 if YARN_RELATION:
@@ -62,4 +62,4 @@ if YARN_RELATION:
         yarn = YARN(hadoop)
         yarn.configure_yarn_base(resourcemanager.host(), resourcemanager.port(),
                                  resourcemanager.hs_http(), resourcemanager.hs_ipc())
-        set_state('hadoop.yarn.ready')
+        set_state('hadoop.yarn.configured')
