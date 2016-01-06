@@ -7,7 +7,7 @@ def get_dist_config(required_keys):
     dist = DistConfig(filename='dist.yaml',
                       required_keys=required_keys)
     opts = LayerOptions('hadoop-base')
-    for key in ('vendor', 'hadoop_version'):
+    for key in ('hadoop_version',):
         if key in opts:
             dist.dist_config[key] = opts[key]
     for key in ('packages', 'groups'):

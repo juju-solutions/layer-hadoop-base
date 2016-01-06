@@ -1,16 +1,27 @@
 includes: ['layer:basic']
 defines:
-  vendor:
-    type: string
   hadoop_version:
+    description: >
+      Version of the Hadoop libraries that should be installed.
+      (This really should be a config option and not a layer option.)
     type: string
   packages:
+    description: >
+      A list of apt packages to be installed during setup.
     type: array
     items: {type: string}
   groups:
+    description: >
+      A list of system groups to be created during setup.
     type: array
     items: {type: string}
   users:
+    description: >
+      This option defines system users to be created during setup.  The value
+      for this option should be a mapping of usernames to information about
+      the user.  Currently, this only supports a 'groups' item that should be
+      a list of groups to add the user to, with the first being the user's
+      primary group.
     type: object
     patternProperties:
       '^[a-z_][a-z0-9_-]*[$]?$':
@@ -21,6 +32,14 @@ defines:
             type: array
             items: {type: string}
   dirs:
+    description: >
+      This option defines directories to be created during setup.  The value
+      for this option should be a mapping of symbolic identifiers (i.e., not
+      the dir path) to a mapping containing information about the directory,
+      such as the path, permissions bits, owner, and group.  The path can
+      contain references to other defined directories in the form
+      '{dirs[<dir-id>]}', or to config option values in the form
+      '{config[<opt-name>]}'.
     type: object
     patternProperties:
       '.*':
@@ -32,6 +51,11 @@ defines:
           owner: {type: string}
           group: {type: string}
   ports:
+    description: >
+      This option defines directories to be created during setup.  The value
+      for this option should be a mapping of symbolic identifiers to a mapping
+      containing information about the port, such as the port number, and an
+      identifier indicating for which services the port should be exposed.
     type: object
     patternProperties:
       '.*':
