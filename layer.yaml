@@ -40,13 +40,3 @@ defines:
         properties:
           port: {type: integer}
           exposed_on: {type: string}
-  resources:
-    type: object
-    patternProperties:
-      '.*':
-        type: object
-        additionalProperties: false
-        properties:
-          url: {type: string}
-          hash: {type: string}
-          hash_type: {type: string}
