@@ -1,1 +1,52 @@
 includes: ['layer:basic']
+defines:
+  vendor:
+    type: string
+  hadoop_version:
+    type: string
+  packages:
+    type: array
+    items: {type: string}
+  groups:
+    type: array
+    items: {type: string}
+  users:
+    type: object
+    patternProperties:
+      '^[a-z_][a-z0-9_-]*[$]?$':
+        type: object
+        additionalProperties: false
+        properties:
+          groups:
+            type: array
+            items: {type: string}
+  dirs:
+    type: object
+    patternProperties:
+      '.*':
+        type: object
+        additionalProperties: false
+        properties:
+          path: {type: string}
+          perms: {type: integer}
+          owner: {type: string}
+          group: {type: string}
+  ports:
+    type: object
+    patternProperties:
+      '.*':
+        type: object
+        additionalProperties: false
+        properties:
+          port: {type: integer}
+          exposed_on: {type: string}
+  resources:
+    type: object
+    patternProperties:
+      '.*':
+        type: object
+        additionalProperties: false
+        properties:
+          url: {type: string}
+          hash: {type: string}
+          hash_type: {type: string}
