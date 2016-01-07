@@ -1,12 +1,13 @@
 from charms.reactive import when, when_not, set_state
 from charms.hadoop import get_hadoop_base
 from charmhelpers.core import hookenv
-from charmhelpers.core.hookenv import interface_to_relations as rel_names
+from charmhelpers.core.hookenv import role_and_interface_to_relations as rel_names
 from jujubigdata.handlers import HDFS, YARN
+from jujubigdata import utils
 
 
-HDFS_RELATION = rel_names('hdfs') or rel_names('datanode')
-YARN_RELATION = rel_names('yarn') or rel_names('nodemanager')
+HDFS_RELATION = rel_names('requires', 'hdfs') or rel_names('provides', 'datanode')
+YARN_RELATION = rel_names('requires', 'yarn') or rel_names('provides', 'nodemanager')
 
 
 @when_not('hadoop.installed')
@@ -40,7 +41,9 @@ if HDFS_RELATION:
     def configure_hdfs(namenode):
         hadoop = get_hadoop_base()
         hdfs = HDFS(hadoop)
-        hdfs.configure_hdfs_base(namenode.host(), namenode.port())
+        utils.update_kv_hosts(namenode.hosts_map())
+        utils.manage_etc_hosts()
+        hdfs.configure_hdfs_base(namenode.namenodes()[0], namenode.port())
         set_state('hadoop.hdfs.configured')
 
 
@@ -60,6 +63,8 @@ if YARN_RELATION:
     def configure_yarn(resourcemanager):
         hadoop = get_hadoop_base()
         yarn = YARN(hadoop)
-        yarn.configure_yarn_base(resourcemanager.host(), resourcemanager.port(),
+        utils.update_kv_hosts(resourcemanager.hosts_map())
+        utils.manage_etc_hosts()
+        yarn.configure_yarn_base(resourcemanager.resourcemanagers()[0], resourcemanager.port(),
                                  resourcemanager.hs_http(), resourcemanager.hs_ipc())
         set_state('hadoop.yarn.configured')

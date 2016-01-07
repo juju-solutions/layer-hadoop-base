@@ -3,7 +3,10 @@ from jujubigdata.handlers import HadoopBase
 from charms.layer import LayerOptions
 
 
-def get_dist_config(required_keys):
+def get_dist_config(required_keys=None):
+    required_keys = required_keys or [
+        'vendor', 'hadoop_version', 'packages',
+        'groups', 'users', 'dirs', 'ports']
     dist = DistConfig(filename='dist.yaml',
                       required_keys=required_keys)
     opts = LayerOptions('hadoop-base')
@@ -20,6 +23,4 @@ def get_dist_config(required_keys):
 
 
 def get_hadoop_base():
-    dist_keys = ['vendor', 'hadoop_version', 'packages',
-                 'groups', 'users', 'dirs', 'ports']
-    return HadoopBase(get_dist_config(dist_keys))
+    return HadoopBase(get_dist_config())

@@ -6,8 +6,8 @@ resources:
     # If replaced with an alternate implementation, it must output *only* two
     # lines containing the JAVA_HOME path, and the Java version, respectively,
     # on stdout.  Upon error, it must exit with a non-zero exit code.
-    url: https://s3.amazonaws.com/jujubigdata/common/noarch/java-installer-0869d106.sh
-    hash: 0869d1069c92e97a56ef2f634e8fd2696f0c97fc819e9782826c235b2517bcd6
+    url: https://s3.amazonaws.com/jujubigdata/common/noarch/java-installer-a4d52ba0.sh
+    hash: a4d52ba0eac9dc949baf28ac5235402bdb2b5bd92f239d75b6959ace8a25da6c
     hash_type: sha256
 optional_resources:
   hadoop-aarch64:
