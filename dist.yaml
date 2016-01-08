@@ -1,6 +1,7 @@
 # This file contains values that are likely to change per distribution.
 # The aim is to make it easier to update / extend the charms with
-# minimal changes to the shared code in charmhelpers.
+# minimal changes to the shared code.
+vendor: 'apache'
 hadoop_version: '2.7.1'
 packages:
     - 'libsnappy1'
@@ -67,3 +68,4 @@ dirs:
         owner: 'hdfs'
         group: 'hadoop'
         perms: 0775
+ports: {}
