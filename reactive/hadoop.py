@@ -1,3 +1,4 @@
+import yaml
 from charms.reactive import when, when_not, set_state
 from charms.hadoop import get_hadoop_base
 from charmhelpers.core import hookenv
@@ -43,6 +44,22 @@ if HDFS_RELATION:
         hdfs = HDFS(hadoop)
         utils.update_kv_hosts(namenode.hosts_map())
         utils.manage_etc_hosts()
+        if not namenode.namenodes():
+            data = yaml.dump({
+                'relation_name': namenode.relation_name,
+                'conversations': {
+                    conv.key: dict({'relation_ids': conv.relation_ids}, **conv.serialize(conv))
+                    for conv in namenode.conversations()
+                },
+                'relation_data': {
+                    rid: {
+                        unit: hookenv.relation_get(unit=unit, rid=rid)
+                        for unit in hookenv.related_units(rid)
+                    } for rid in hookenv.relation_ids(namenode.relation_name)
+                },
+            }, default_flow_style=False)
+            for line in data.splitlines():
+                hookenv.log(line)
         hdfs.configure_hdfs_base(namenode.namenodes()[0], namenode.port())
         set_state('hadoop.hdfs.configured')
 
@@ -65,6 +82,22 @@ if YARN_RELATION:
         yarn = YARN(hadoop)
         utils.update_kv_hosts(resourcemanager.hosts_map())
         utils.manage_etc_hosts()
+        if not resourcemanager.resourcemanagers():
+            data = yaml.dump({
+                'relation_name': resourcemanager.relation_name,
+                'conversations': {
+                    conv.key: dict({'relation_ids': conv.relation_ids}, **conv.serialize(conv))
+                    for conv in resourcemanager.conversations()
+                },
+                'relation_data': {
+                    rid: {
+                        unit: hookenv.relation_get(unit=unit, rid=rid)
+                        for unit in hookenv.related_units(rid)
+                    } for rid in hookenv.relation_ids(resourcemanager.relation_name)
+                },
+            }, default_flow_style=False)
+            for line in data.splitlines():
+                hookenv.log(line)
         yarn.configure_yarn_base(resourcemanager.resourcemanagers()[0], resourcemanager.port(),
                                  resourcemanager.hs_http(), resourcemanager.hs_ipc())
         set_state('hadoop.yarn.configured')
