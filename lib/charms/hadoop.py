@@ -1,6 +1,6 @@
 from jujubigdata.utils import DistConfig
 from jujubigdata.handlers import HadoopBase
-from charms.layer import LayerOptions
+from charms import layer
 
 
 def get_dist_config(required_keys=None):
@@ -9,7 +9,7 @@ def get_dist_config(required_keys=None):
         'groups', 'users', 'dirs', 'ports']
     dist = DistConfig(filename='dist.yaml',
                       required_keys=required_keys)
-    opts = LayerOptions('hadoop-base')
+    opts = layer.options('hadoop-base')
     for key in ('hadoop_version',):
         if key in opts:
             dist.dist_config[key] = opts[key]
