@@ -30,13 +30,8 @@ dirs:
     hadoop_tmp:
         path: '/tmp/hadoop'
         perms: 0777
-    mapred_log:
+    mapred_log_dir:
         path: '/var/log/hadoop/mapred'
-        owner: 'mapred'
-        group: 'hadoop'
-        perms: 0755
-    mapred_run:
-        path: '/var/run/hadoop/mapred'
         owner: 'mapred'
         group: 'hadoop'
         perms: 0755
