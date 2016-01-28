@@ -1,5 +1,5 @@
 import yaml
-from charms.reactive import when, when_not, set_state
+from charms.reactive import hook, when, when_not, set_state
 from charms.hadoop import get_hadoop_base
 from charmhelpers.core import hookenv
 from charmhelpers.core.hookenv import role_and_interface_to_relations as rel_names
@@ -7,8 +7,15 @@ from jujubigdata.handlers import HDFS, YARN
 from jujubigdata import utils
 
 
-HDFS_RELATION = rel_names('requires', 'hdfs') or rel_names('provides', 'datanode')
-YARN_RELATION = rel_names('requires', 'yarn') or rel_names('provides', 'nodemanager')
+HDFS_RELATION = rel_names('requires', 'dfs') or rel_names('provides', 'dfs-slave')
+YARN_RELATION = rel_names('requires', 'mapred') or rel_names('provides', 'mapred-slave')
+
+
+@hook('upgrade-charm')
+def handle_legacy_installed_flag():
+    hadoop = get_hadoop_base()
+    if hadoop.is_installed():
+        set_state('hadoop.installed')
 
 
 @when_not('hadoop.installed')
