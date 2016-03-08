@@ -15,7 +15,9 @@ def get_dist_config(required_keys=None):
             dist.dist_config[key] = opts[key]
     for key in ('packages', 'groups'):
         if key in opts:
-            dist.dist_config[key] = list(set(dist.dist_config[key]) | set(opts[key]))
+            dist.dist_config[key] = list(
+                set(dist.dist_config[key]) | set(opts[key])
+            )
     for key in ('users', 'dirs', 'ports'):
         if key in opts:
             dist.dist_config[key].update(opts[key])
