@@ -37,7 +37,7 @@ def install_hadoop():
 
 
 if HDFS_RELATION:
-    @when('hadoop.installed', '{hdfs}.related'.format(hdfs=HDFS_RELATION[0]))
+    @when('hadoop.installed', '{hdfs}.joined'.format(hdfs=HDFS_RELATION[0]))
     def set_hdfs_spec(namenode):
         hadoop = get_hadoop_base()
         namenode.set_local_spec(hadoop.spec())
@@ -76,7 +76,7 @@ if HDFS_RELATION:
 
 
 if YARN_RELATION:
-    @when('hadoop.installed', '{yarn}.related'.format(yarn=YARN_RELATION[0]))
+    @when('hadoop.installed', '{yarn}.joined'.format(yarn=YARN_RELATION[0]))
     def set_yarn_spec(resourcemanager):
         hadoop = get_hadoop_base()
         resourcemanager.set_local_spec(hadoop.spec())
