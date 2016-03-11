@@ -1,6 +1,6 @@
 import yaml
 from charms.reactive import hook, when, when_not, set_state
-from charms.hadoop import get_hadoop_base
+from charms.layer.hadoop_base import get_hadoop_base
 from charmhelpers.core import hookenv
 from charmhelpers.core.hookenv import role_and_interface_to_relations \
     as rel_names
