@@ -57,7 +57,7 @@ dirs:
         path: '{dirs[hdfs_dir_base]}/cache'
         owner: 'hdfs'
         group: 'hadoop'
-        perms: 1775
+        perms: 01775
     cache_dir:
         path: '{dirs[hdfs_dir_base]}/cache/hadoop'
         owner: 'hdfs'
