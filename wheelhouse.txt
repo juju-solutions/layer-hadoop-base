@@ -1,2 +1,3 @@
 jujuresources>=0.3.3,<1.0.0
 jujubigdata>=6.0.0,<7.0.0
+setuptools-scm>=1.0.0,<2.0.0
