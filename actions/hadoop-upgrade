@@ -1,0 +1,251 @@
+#!/bin/bash
+set -e
+export SAVEPATH=$PATH
+. /etc/environment
+export PATH=$PATH:$SAVEPATH
+export JAVA_HOME
+
+current_hadoop_ver=`/usr/lib/hadoop/bin/hadoop version|head -n1|awk '{print $2}'`
+config_hadoop_ver=`config-get hadoop_version`
+new_hadoop_ver=`action-get version`
+cpu_arch=`lscpu|grep -i arch|awk '{print $2}'`
+prepare=`action-get prepare`
+query=`action-get query`
+postupgrade=`action-get postupgrade`
+standalone=`action-get standalone`
+forceupgrade=`action-get forceupgrade`
+
+if jps | grep -i namenode ; then
+        is_namenode="true"
+        chlp unitdata set is.namenode true
+else
+        is_namenode="false"
+fi
+
+if jps | grep -i datanode ; then
+        is_datanode="true"
+        chlp unitdata set is.datanode true
+else
+        is_datanode="false"
+fi
+
+function init_procs () {
+        # stop or start hadoop procs (jps procs)
+        if [ $1 == "stop" ] ; then
+                i=0
+                unset hadoop_procs
+                while read -r line ; do
+                        hadoop_procs[$i]=$(echo $line|awk '{print $2}') ; ((i++))
+                done < <(jps|grep -vi jps)
+        fi
+        for proc in ${hadoop_procs[@],,} ; do
+                case $proc in
+                        namenode)
+                                user="hdfs"
+                                if [ $1 == "restart" ] ; then
+                                        su $user -c "hadoop-daemon.sh stop namenode"
+                                        su $user -c "hadoop-daemon.sh start namenode"
+                                elif [ $1 == "start" ] && [ "$postupgrade" == "" ] ; then
+                                        su $user -c "hadoop-daemon.sh start namenode -rollingUpgrade started"
+                                elif [ $1 == "start" ] && [ "$postupgrade" == "rollback" ] ; then
+                                        su $user -c "hadoop-daemon.sh start namenode -rollingUpgrade rollback" 
+                                elif [ $1 == "start" ] && [ "${postupgrade}" == "downgrade" ] ; then
+                                        su hdfs -c "hadoop-daemon.sh start namenode"
+                                elif [ $1 == "stop" ] ; then
+                                        su hdfs -c "hadoop-daemon.sh stop namenode"
+                                fi
+                                ;;
+                        datanode)
+                                user="hdfs"
+                                if [ $1 == "stop" ] ; then
+                                        su $user -c "hdfs dfsadmin -shutdownDatanode localhost:50020 upgrade"
+                                else
+                                        su $user -c "hadoop-daemon.sh start datanode"
+                                fi
+                                ;;
+                        nodemanager|resourcemanager)
+                                user="yarn"
+                                if [ $1 == "stop" ] ; then
+                                        su $user -c "yarn-daemon.sh stop $proc" 
+                                else
+                                        su $user -c "yarn-daemon.sh start $proc" 
+                                fi
+                                ;;
+                        jobhistoryserver)
+                                user="mapred"
+                                if [ $1 == "stop" ] ; then
+                                        su $user -c "mr-jobhistory-daemon.sh stop historyserver"
+                                else
+                                        su $user -c "mr-jobhistory-daemon.sh start historyserver"
+                                fi
+                                ;;
+               esac
+        done
+        sleep 2
+}
+
+function query_upgrade () {
+        # check upgrade, if not ready / prepared set failure message and exit
+        if [ "$standalone" == "False" ] ; then
+                if ! su hdfs -c "hdfs dfsadmin -rollingUpgrade query"|grep -i "Proceed with rolling upgrade" ; then
+                        action-set result="Rolling upgrade has not been prepared, see documentation"
+                        status-set active "Rolling upgrade not prepared, see docs"
+                        exit 1
+                fi
+        fi
+}
+
+if [ "${postupgrade}" == "finalize" ] ; then
+        if [ "$standalone" == "True" ] ; then
+                su hdfs -c "hadoop-daemon.sh start namenode"
+        fi
+        if [ $is_namenode == "false" ] ; then
+                action-set result="Namenode process not detected - please run this action on both namenodes"
+                exit 1
+        fi
+        su hdfs -c "hdfs dfsadmin -finalizeUpgrade"
+        su hdfs -c "hdfs dfsadmin -rollingUpgrade finalize"
+        if [ "$?" == 0 ] ; then
+                action-set finalized="true"
+        else
+                action-set finalized="false"
+        fi
+        init_procs restart
+        status-set active "Ready - upgrade finalized, downgrade or rollback unavailable"
+        exit 0
+fi
+
+if ! [ "$new_hadoop_ver" == "$config_hadoop_ver" ] ; then
+        action-set result="Version specified does not match configured version, aborting"
+        action-fail "Version specified does not match configured version"
+        exit 1
+fi
+
+if [ "$new_hadoop_ver" == "$current_hadoop_ver" ] ; then
+        action-set result="Same version already installed, aborting"
+        action-fail "Same version already installed"
+        exit 1
+fi
+
+if [ "$prepare" == "True" ] ; then
+        if [ "$standalone" == "True" ] ; then su hdfs -c "hdfs dfsadmin -safemode enter" ; fi
+        su hdfs -c "hdfs dfsadmin -rollingUpgrade prepare"
+        action-set result="Upgrade image prepared - proceed with rolling upgrade"
+        status-set active "Upgrade image prepared - proceed with rolling upgrade"
+        exit 0
+fi
+
+if [ "$query" == "True" ] ; then
+        query_upgrade
+        action-set result="Upgrade prepared"
+        exit 0
+fi
+
+if ! [ "${forceupgrade}" == "True" ] ; then
+        query_upgrade
+fi
+
+if [ "${postupgrade}" == "downgrade" ] ; then
+        if [ "${standalone}" == "False" ] ; then
+                query_upgrade
+        fi
+        if [ -d /usr/lib/hadoop-${new_hadoop_ver} ] ; then
+                rm /usr/lib/hadoop
+                ln -s /usr/lib/hadoop-${new_hadoop_ver} /usr/lib/hadoop
+                if [ -d /usr/lib/hadoop-${current_hadoop_ver}/logs ] ; then
+                        mv /usr/lib/hadoop-${current_hadoop_ver}/logs /usr/lib/hadoop/
+                fi
+                action-set newhadoop.downgrade="successfully downgraded, ready for finalize"
+                status-set active "Ready - downgrade to ${new_hadoop_ver} complete, ready for finalize"
+                init_procs stop
+                init_procs start
+                exit 0
+        else
+                if [ "${forceupgrade}" == "False" ] ; then
+                        action-set newhadoop.downgrade="previous version not found, aborting"
+                        action-fail "previous version not found, cannot downgrade - try forcing"
+                        status-set active "previous version not found, aborting"
+                        exit 1
+                fi
+        fi
+fi
+
+if [ "${postupgrade}" == "disabled_rollback" ] ; then
+        if is-leader && [ ${is_namenode} == "true" ] ; then
+                su hdfs -c "stop-dfs.sh"
+        fi
+        if [ -d /usr/lib/hadoop-${new_hadoop_ver} ] ; then
+                rm /usr/lib/hadoop
+                ln -s /usr/lib/hadoop-${new_hadoop_ver} /usr/lib/hadoop
+                if [ -d /usr/lib/hadoop-${current_hadoop_ver}/logs ] ; then
+                        mv /usr/lib/hadoop-${current_hadoop_ver}/logs /usr/lib/hadoop/
+                fi
+                action-set newhadoop.rollback="successfully rolled back"
+                status-set active "Ready - rollback to ${new_hadoop_ver} complete - ready for rollback_finalize"
+                exit 0
+        else
+                action-set newhadoop.rollback="previous version not found, unpacking..."
+                status-set active "previous version not found, unpacking..."
+        fi
+fi
+
+if [ "${postupgrade}" == "disabled_rollback_finalize" ] ; then
+        is_namenode=`chlp unitdata get is.namenode`
+        if [ ${is_namenode} == "true" ] ; then
+                if is-leader ; then
+                        su hdfs -c "hadoop-daemon.sh start namenode -rollingUpgrade rollback"
+                        exit 0
+                else
+                        sleep 60
+                        su hdfs -c "hdfs namenode -bootstrapStandby"
+                        su hdfs -c "start-dfs.sh -rollback"
+                        exit 0
+                fi
+        fi
+fi
+
+
+status-set maintenance "Fetching hadoop-${new_hadoop_ver}-${cpu_arch}"
+juju-resources fetch hadoop-${new_hadoop_ver}-${cpu_arch}
+if [ ! $? -eq 0 ] ; then
+        action-set newhadoop.fetch="fail"
+        exit 1
+fi
+action-set newhadoop.fetch="success"
+
+status-set maintenance "Verifying hadoop-${new_hadoop_ver}-${cpu_arch}"
+juju-resources verify hadoop-${new_hadoop_ver}-${cpu_arch}
+if [ ! $? -eq 0 ] ; then
+        action-set newhadoop.verify="fail"
+        exit 1
+fi
+action-set newhadoop.verify="success"
+
+new_hadoop_path=`juju-resources resource_path hadoop-${new_hadoop_ver}-${cpu_arch}`
+if [ -h /usr/lib/hadoop ] ; then
+       rm /usr/lib/hadoop
+fi
+
+mv /usr/lib/hadoop/ /usr/lib/hadoop-${current_hadoop_ver}
+ln -s /usr/lib/hadoop-${current_hadoop_ver}/ /usr/lib/hadoop
+current_hadoop_path=hadoop-${current_hadoop_ver}
+
+status-set maintenance "Extracting hadoop-${new_hadoop_ver}-${cpu_arch}"
+tar -zxvf ${new_hadoop_path} -C /usr/lib/
+if [ $? -eq 0 ] ; then
+        if [ -h /usr/lib/hadoop ] ; then
+                rm /usr/lib/hadoop
+        fi
+        ln -s /usr/lib/hadoop-${new_hadoop_ver} /usr/lib/hadoop
+fi
+if [ -d ${current_hadoop_path}/logs ] ; then
+        mv ${current_hadoop_path}/logs ${new_hadoop_path}/
+fi
+# set hadoop.version in unitdata
+chlp unitdata set hadoop.version ${new_hadoop_ver}
+
+hooks/refresh-spec
+action-set result="complete"
+status-set maintenance "hadoop version ${new_hadoop_ver} installed"
+init_procs stop
+init_procs start

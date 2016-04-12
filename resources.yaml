@@ -42,3 +42,7 @@ optional_resources:
     url: https://s3.amazonaws.com/jujubigdata/apache/x86_64/hadoop-2.7.1-x86_64-991dc34e.tar.gz
     hash: 991dc34ea42a80b236ca46ff5d207107bcc844174df0441777248fdb6d8c9aa0
     hash_type: sha256
+  hadoop-2.7.2-x86_64:
+    url: http://www-us.apache.org/dist/hadoop/common/hadoop-2.7.2/hadoop-2.7.2.tar.gz
+    hash: 49ad740f85d27fa39e744eb9e3b1d9442ae63d62720f0aabdae7aa9a718b03f7
+    hash_type: sha256
