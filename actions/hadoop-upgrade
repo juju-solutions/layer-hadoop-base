@@ -7,13 +7,13 @@ export JAVA_HOME
 
 current_hadoop_ver=`/usr/lib/hadoop/bin/hadoop version|head -n1|awk '{print $2}'`
 config_hadoop_ver=`config-get hadoop_version`
-new_hadoop_ver=`action-get version`
+new_hadoop_ver=${1:-`action-get version`}
 cpu_arch=`lscpu|grep -i arch|awk '{print $2}'`
-prepare=`action-get prepare`
-query=`action-get query`
-postupgrade=`action-get postupgrade`
-standalone=`action-get standalone`
-forceupgrade=`action-get forceupgrade`
+prepare=${2:-`action-get prepare`}
+query=${3:-`action-get query`}
+postupgrade=${4:-`action-get postupgrade`}
+standalone=$(charms.reactive is_state leadership.set.ha-initialized && echo 'False' || echo 'True')
+forceupgrade=False
 
 if jps | grep -i namenode ; then
         is_namenode="true"
@@ -32,13 +32,9 @@ fi
 function init_procs () {
         # stop or start hadoop procs (jps procs)
         if [ $1 == "stop" ] ; then
-                i=0
-                unset hadoop_procs
-                while read -r line ; do
-                        hadoop_procs[$i]=$(echo $line|awk '{print $2}') ; ((i++))
-                done < <(jps|grep -vi jps)
+                hadoop_procs=$(pgrep -alf java | awk -F. '{print $NF}')
         fi
-        for proc in ${hadoop_procs[@],,} ; do
+        for proc in $hadoop_procs; do
                 case $proc in
                         namenode)
                                 user="hdfs"
@@ -88,20 +84,16 @@ function query_upgrade () {
         # check upgrade, if not ready / prepared set failure message and exit
         if [ "$standalone" == "False" ] ; then
                 if ! su hdfs -c "hdfs dfsadmin -rollingUpgrade query"|grep -i "Proceed with rolling upgrade" ; then
-                        action-set result="Rolling upgrade has not been prepared, see documentation"
-                        status-set active "Rolling upgrade not prepared, see docs"
-                        exit 1
+                        action-fail "Rolling upgrade has not been prepared, see UPGRADING-HADOOP.md"
+                        exit 0
                 fi
         fi
 }
 
 if [ "${postupgrade}" == "finalize" ] ; then
-        if [ "$standalone" == "True" ] ; then
-                su hdfs -c "hadoop-daemon.sh start namenode"
-        fi
         if [ $is_namenode == "false" ] ; then
-                action-set result="Namenode process not detected - please run this action on both namenodes"
-                exit 1
+                action-fail "Namenode process not detected - please run this action on both namenodes"
+                exit 0
         fi
         su hdfs -c "hdfs dfsadmin -finalizeUpgrade"
         su hdfs -c "hdfs dfsadmin -rollingUpgrade finalize"
@@ -111,27 +103,27 @@ if [ "${postupgrade}" == "finalize" ] ; then
                 action-set finalized="false"
         fi
         init_procs restart
-        status-set active "Ready - upgrade finalized, downgrade or rollback unavailable"
+        action-set result="Ready - upgrade finalized, downgrade or rollback no longer available"
         exit 0
 fi
 
 if ! [ "$new_hadoop_ver" == "$config_hadoop_ver" ] ; then
-        action-set result="Version specified does not match configured version, aborting"
         action-fail "Version specified does not match configured version"
-        exit 1
+        exit 0
 fi
 
 if [ "$new_hadoop_ver" == "$current_hadoop_ver" ] ; then
-        action-set result="Same version already installed, aborting"
         action-fail "Same version already installed"
-        exit 1
+        exit 0
 fi
 
 if [ "$prepare" == "True" ] ; then
-        if [ "$standalone" == "True" ] ; then su hdfs -c "hdfs dfsadmin -safemode enter" ; fi
+        if [ "$standalone" == "True" ]; then
+            su hdfs -c "hdfs dfsadmin -safemode enter"
+        fi
         su hdfs -c "hdfs dfsadmin -rollingUpgrade prepare"
         action-set result="Upgrade image prepared - proceed with rolling upgrade"
-        status-set active "Upgrade image prepared - proceed with rolling upgrade"
+        juju-log "Upgrade image prepared - proceed with rolling upgrade"
         exit 0
 fi
 
@@ -150,22 +142,22 @@ if [ "${postupgrade}" == "downgrade" ] ; then
                 query_upgrade
         fi
         if [ -d /usr/lib/hadoop-${new_hadoop_ver} ] ; then
-                rm /usr/lib/hadoop
+                rm -f /usr/lib/hadoop
                 ln -s /usr/lib/hadoop-${new_hadoop_ver} /usr/lib/hadoop
                 if [ -d /usr/lib/hadoop-${current_hadoop_ver}/logs ] ; then
                         mv /usr/lib/hadoop-${current_hadoop_ver}/logs /usr/lib/hadoop/
                 fi
                 action-set newhadoop.downgrade="successfully downgraded, ready for finalize"
-                status-set active "Ready - downgrade to ${new_hadoop_ver} complete, ready for finalize"
+                juju-log "Ready - downgrade to ${new_hadoop_ver} complete, ready for finalize"
                 init_procs stop
                 init_procs start
+                hooks/update-status
                 exit 0
         else
                 if [ "${forceupgrade}" == "False" ] ; then
-                        action-set newhadoop.downgrade="previous version not found, aborting"
-                        action-fail "previous version not found, cannot downgrade - try forcing"
-                        status-set active "previous version not found, aborting"
-                        exit 1
+                        action-fail "previous version not found, cannot downgrade"
+                        juju-log "previous version not found, aborting"
+                        exit 0
                 fi
         fi
 fi
@@ -181,11 +173,11 @@ if [ "${postupgrade}" == "disabled_rollback" ] ; then
                         mv /usr/lib/hadoop-${current_hadoop_ver}/logs /usr/lib/hadoop/
                 fi
                 action-set newhadoop.rollback="successfully rolled back"
-                status-set active "Ready - rollback to ${new_hadoop_ver} complete - ready for rollback_finalize"
+                juju-log "Ready - rollback to ${new_hadoop_ver} complete - ready for rollback_finalize"
                 exit 0
         else
                 action-set newhadoop.rollback="previous version not found, unpacking..."
-                status-set active "previous version not found, unpacking..."
+                juju-log "previous version not found, unpacking..."
         fi
 fi
 
@@ -205,33 +197,26 @@ if [ "${postupgrade}" == "disabled_rollback_finalize" ] ; then
 fi
 
 
-status-set maintenance "Fetching hadoop-${new_hadoop_ver}-${cpu_arch}"
+juju-log "Fetching hadoop-${new_hadoop_ver}-${cpu_arch}"
 juju-resources fetch hadoop-${new_hadoop_ver}-${cpu_arch}
 if [ ! $? -eq 0 ] ; then
-        action-set newhadoop.fetch="fail"
-        exit 1
+        action-fail "Failed to fetch hadoop-${new_hadoop_ver}-${cpu_arch} binary"
+        exit 0
 fi
-action-set newhadoop.fetch="success"
-
-status-set maintenance "Verifying hadoop-${new_hadoop_ver}-${cpu_arch}"
-juju-resources verify hadoop-${new_hadoop_ver}-${cpu_arch}
-if [ ! $? -eq 0 ] ; then
-        action-set newhadoop.verify="fail"
-        exit 1
-fi
-action-set newhadoop.verify="success"
 
 new_hadoop_path=`juju-resources resource_path hadoop-${new_hadoop_ver}-${cpu_arch}`
 if [ -h /usr/lib/hadoop ] ; then
        rm /usr/lib/hadoop
 fi
 
-mv /usr/lib/hadoop/ /usr/lib/hadoop-${current_hadoop_ver}
+if [ -e /usr/lib/hadoop ]; then
+    mv /usr/lib/hadoop/ /usr/lib/hadoop-${current_hadoop_ver}
+fi
 ln -s /usr/lib/hadoop-${current_hadoop_ver}/ /usr/lib/hadoop
 current_hadoop_path=hadoop-${current_hadoop_ver}
 
-status-set maintenance "Extracting hadoop-${new_hadoop_ver}-${cpu_arch}"
-tar -zxvf ${new_hadoop_path} -C /usr/lib/
+juju-log "Extracting hadoop-${new_hadoop_ver}-${cpu_arch}"
+tar -zxf ${new_hadoop_path} -C /usr/lib/
 if [ $? -eq 0 ] ; then
         if [ -h /usr/lib/hadoop ] ; then
                 rm /usr/lib/hadoop
@@ -244,8 +229,8 @@ fi
 # set hadoop.version in unitdata
 chlp unitdata set hadoop.version ${new_hadoop_ver}
 
-hooks/refresh-spec
 action-set result="complete"
-status-set maintenance "hadoop version ${new_hadoop_ver} installed"
+juju-log "Hadoop version ${new_hadoop_ver} installed"
 init_procs stop
 init_procs start
+hooks/update-status  # ensure new spec is sent out / verified

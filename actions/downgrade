@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -e
+
+actions/hadoop-upgrade $(config-get hadoop_version) False False 'downgrade'

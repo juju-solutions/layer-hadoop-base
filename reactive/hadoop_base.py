@@ -44,9 +44,15 @@ if HDFS_RELATION:
 
     @when('{hdfs}.spec.mismatch'.format(hdfs=HDFS_RELATION[0]))
     def hdfs_spec_mismatch(namenode):
+        local_spec = namenode.local_spec()
+        remote_spec = namenode.remote_spec()
+        for key in list(local_spec.keys()):
+            if local_spec.get(key) == remote_spec.get(key):
+                local_spec.pop(key, None)
+                remote_spec.pop(key, None)
         hookenv.status_set('blocked',
                            'Spec mismatch with NameNode: {} != {}'.format(
-                               namenode.local_spec(), namenode.remote_spec()))
+                               local_spec, remote_spec))
 
     @when('{hdfs}.ready'.format(hdfs=HDFS_RELATION[0]))
     def configure_hdfs(namenode):
@@ -85,10 +91,16 @@ if YARN_RELATION:
 
     @when('{yarn}.spec.mismatch'.format(yarn=YARN_RELATION[0]))
     def yarn_spec_mismatch(resourcemanager):
+        local_spec = resourcemanager.local_spec()
+        remote_spec = resourcemanager.remote_spec()
+        for key in list(local_spec.keys()):
+            if local_spec.get(key) == remote_spec.get(key):
+                local_spec.pop(key, None)
+                remote_spec.pop(key, None)
         hookenv.status_set(
             'blocked',
             'Spec mismatch with ResourceManager: {} != {}'.format(
-                resourcemanager.local_spec(), resourcemanager.remote_spec()))
+                local_spec, remote_spec))
 
     @when('{yarn}.ready'.format(yarn=YARN_RELATION[0]))
     def configure_yarn(resourcemanager):
