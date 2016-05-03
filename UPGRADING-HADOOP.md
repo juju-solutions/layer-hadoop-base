@@ -52,11 +52,11 @@ The Juju commands for performing an upgrade are:
 
 ## Performing a Downgrade
 
-You can also downgrade Hadoop, for instance if there was an issue with an
-upgrade, as long as the versions have the same NameNode and DataNode layout
-format.
+You can also downgrade Hadoop from an in-progress or previous upgrade, as long
+as the versions have the same NameNode and DataNode layout format.
 
-The steps for downgrading are very similar to upgrading:
+The steps for downgrading are very similar to upgrading, but note that slaves
+*must* be downgraded before masters:
 
     juju set namenode hadoop_version=2.7.1
     juju set resourcemanager hadoop_version=2.7.1
