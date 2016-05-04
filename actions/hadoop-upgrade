@@ -10,8 +10,7 @@ config_hadoop_ver=`config-get hadoop_version`
 new_hadoop_ver=${1:-`action-get version`}
 cpu_arch=`lscpu|grep -i arch|awk '{print $2}'`
 prepare=${2:-`action-get prepare`}
-query=${3:-`action-get query`}
-postupgrade=${4:-`action-get postupgrade`}
+postupgrade=${3:-`action-get postupgrade`}
 standalone=$(charms.reactive is_state leadership.set.ha-initialized && echo 'False' || echo 'True')
 forceupgrade=False
 
@@ -80,16 +79,6 @@ function init_procs () {
         sleep 2
 }
 
-function query_upgrade () {
-        # check upgrade, if not ready / prepared set failure message and exit
-        if [ "$standalone" == "False" ] ; then
-                if ! su hdfs -c "hdfs dfsadmin -rollingUpgrade query"|grep -i "Proceed with rolling upgrade" ; then
-                        action-fail "Rolling upgrade has not been prepared, see UPGRADING-HADOOP.md"
-                        exit 0
-                fi
-        fi
-}
-
 if [ "${postupgrade}" == "finalize" ] ; then
         if [ $is_namenode == "false" ] ; then
                 action-fail "Namenode process not detected - please run this action on both namenodes"
@@ -122,25 +111,19 @@ if [ "$prepare" == "True" ] ; then
             su hdfs -c "hdfs dfsadmin -safemode enter"
         fi
         su hdfs -c "hdfs dfsadmin -rollingUpgrade prepare"
-        action-set result="Upgrade image prepared - proceed with rolling upgrade"
-        juju-log "Upgrade image prepared - proceed with rolling upgrade"
+        action-set result="Upgrade image started"
         exit 0
 fi
 
-if [ "$query" == "True" ] ; then
-        query_upgrade
-        action-set result="Upgrade prepared"
-        exit 0
-fi
-
-if ! [ "${forceupgrade}" == "True" ] ; then
-        query_upgrade
+if [[ "${forceupgrade}" != "True" && "$standalone" != "True" ]] ; then
+        # check upgrade, if not ready / prepared set failure message and exit
+        if ! su hdfs -c "hdfs dfsadmin -rollingUpgrade query" | grep -qi "Proceed with rolling upgrade"; then
+                action-fail "Rolling upgrade has not been prepared, see UPGRADING-HADOOP.md"
+                exit 0
+        fi
 fi
 
 if [ "${postupgrade}" == "downgrade" ] ; then
-        if [ "${standalone}" == "False" ] ; then
-                query_upgrade
-        fi
         if [ -d /usr/lib/hadoop-${new_hadoop_ver} ] ; then
                 rm -f /usr/lib/hadoop
                 ln -s /usr/lib/hadoop-${new_hadoop_ver} /usr/lib/hadoop

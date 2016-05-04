@@ -26,7 +26,7 @@ The slave nodes have actions for restarting these services manually.
 The steps of an upgrade are:
 
   1. Set the target Hadoop version on each service
-  2. Prepare the upgrade
+  2. Prepare the upgrade, wait until complete
   3. Upgrade each NameNode (starting with the standby will minimize fail-overs)
   4. Upgrade the ResourceManager
   5. Upgrade the slaves (individually, or in groups)
@@ -40,6 +40,11 @@ The Juju commands for performing an upgrade are:
 
     juju action do namenode/0 prepare-upgrade
 
+    # repeat this until the image is ready
+    juju action do namenode/0 query
+    juju action fetch --wait 0 <query-action-id>
+
+    # once the image is complete, proceed with the upgrade
     juju action do namenode/1 upgrade
     juju action do namenode/0 upgrade
 
@@ -62,6 +67,13 @@ The steps for downgrading are very similar to upgrading, but note that slaves
     juju set resourcemanager hadoop_version=2.7.1
     juju set slave hadoop_version=2.7.1
 
+    juju action do namenode/0 prepare-upgrade
+
+    # repeat this until the image is ready
+    juju action do namenode/0 query
+    juju action fetch --wait 0 <query-action-id>
+
+    # once the image is complete, proceed with the upgrade
     juju action do slave/0 downgrade  # for each slave
 
     juju action do resourcemanager/0 downgrade

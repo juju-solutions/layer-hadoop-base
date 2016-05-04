@@ -2,4 +2,4 @@
 
 set -e
 
-actions/hadoop-upgrade $(config-get hadoop_version) True False ''
+actions/hadoop-upgrade $(config-get hadoop_version) True ''

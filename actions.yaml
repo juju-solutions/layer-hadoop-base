@@ -1,5 +1,7 @@
 prepare-upgrade:
   description: Prepare HDFS for an upgrade
+query:
+  description: Check the status of the upgrade image
 upgrade:
   description: Upgrade this unit
 downgrade:

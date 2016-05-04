@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if su hdfs -c "hdfs dfsadmin -rollingUpgrade query" | grep -qi "Proceed with rolling upgrade"; then
+    action-set ready='true'
+    action-set message='Upgrade image complete, proceed with upgrade'
+else
+    action-set ready='false'
+    action-set message='Upgrade image not yet complete'
+fi
