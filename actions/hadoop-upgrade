@@ -212,6 +212,16 @@ fi
 # set hadoop.version in unitdata
 chlp unitdata set hadoop.version ${new_hadoop_ver}
 
+if grep hadoop-lzo-${cpu_arch} resources.yaml ; then
+        juju-log "Lzo found for ${cpu_arch}, installing"
+        juju-resources fetch hadoop-lzo-${cpu_arch}
+        if [ ! $? -eq 0 ] ; then
+                action-fail "Failed to fetch hadoop-lzo-${cpu_arch} binary"
+        fi
+        lzo_path=`juju-resources resource_path hadoop-lzo-${cpu_arch}`
+        tar -zxf ${lzo_path} -C /usr/lib/hadoop/
+fi
+
 action-set result="complete"
 juju-log "Hadoop version ${new_hadoop_ver} installed"
 init_procs stop
