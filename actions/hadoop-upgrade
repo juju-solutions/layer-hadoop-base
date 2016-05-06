@@ -212,7 +212,7 @@ fi
 # set hadoop.version in unitdata
 chlp unitdata set hadoop.version ${new_hadoop_ver}
 
-if grep hadoop-lzo-${cpu_arch} resources.yaml ; then
+if grep -q hadoop-lzo-${cpu_arch} resources.yaml ; then
         juju-log "Lzo found for ${cpu_arch}, installing"
         juju-resources fetch hadoop-lzo-${cpu_arch}
         if [ ! $? -eq 0 ] ; then
