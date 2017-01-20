@@ -14,6 +14,18 @@ optional_resources:
     url: https://git.launchpad.net/bigdata-data/plain/apache/aarch64/hadoop-2.4.1.tar.gz?id=c34a21c939f5fce9ab89b95d65fe2df50e7bbab0
     hash: 03ad135835bfe413f85fe176259237a8
     hash_type: md5
+  hadoop-2.4.2-aarch64:
+    url: https://git.launchpad.net/bigdata-data/plain/apache/aarch64/hadoop-2.4.1.tar.gz?id=c34a21c939f5fce9ab89b95d65fe2df50e7bbab0
+    hash: 03ad135835bfe413f85fe176259237a8
+    hash_type: md5
+  hadoop-2.7.2-aarch64:
+    url: https://s3.amazonaws.com/jujubigdata/apache/aarch64/hadoop-2.7.2-aarch64-3779525.tar.gz
+    hash: 3779525c68d7ff3990c60de55f7f44c2
+    hash_type: md5
+  hadoop-2.7.3-aarch64:
+    url: https://s3.amazonaws.com/jujubigdata/apache/aarch64/hadoop-2.7.3-aarch64-32d835d.tar.gz
+    hash: 32d835d614934a1a4b3699ffe82b490f
+    hash_type: md5
   hadoop-lzo-ppc64le:
     url: https://s3.amazonaws.com/jujubigdata/apache/ppc64le/hadoop-lzo-0.4.20-SNAPSHOT-ppc64le-c470848e.tgz
     hash: c470848eaedf2558a06c2e07ce6ac2a612c5e7a64c16707d47954da2a387573c
